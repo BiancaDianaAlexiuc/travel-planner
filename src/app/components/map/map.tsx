@@ -1,16 +1,27 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { GoogleMap, Marker, Autocomplete } from "@react-google-maps/api";
+import { GoogleMap, Marker, Autocomplete, DirectionsService, DirectionsRenderer } from "@react-google-maps/api";
 
 const MapComponent = () => {
-  const [selectedPlace, setSelectedPlace] = useState(null);
+  const [selectedPlace, setSelectedPlace]: any = useState(null);
   const [searchLngLat, setSearchLngLat]: any = useState(null);
   const [currentLocation, setCurrentLocation]: any = useState(null);
-  const autocompleteRef : any = useRef(null);
-  const [address, setAddress] = useState("");
+  const autocompleteRef: any = useRef(null);
+  const [directions, setDirections] = useState(null);
+  const [travelTime, setTravelTime] = useState(null);
 
-
+  const directionsCallback = (response: any) => {
+    if (response !== null) {
+      if (response.status === 'OK') {
+        setDirections(response);
+        const route = response.routes[0].legs[0];
+        setTravelTime(route.duration.text);
+      } else {
+        console.error('Directions request failed due to ' + response.status);
+      }
+    }
+  };
 
   // static lat and lng
   const center = { lat: 51.509865, lng: -0.118092 };
@@ -27,7 +38,7 @@ const MapComponent = () => {
   };
 
   // get current location
-  const handleGetLocationClick = () => {
+  const handleGetLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -45,33 +56,31 @@ const MapComponent = () => {
     }
   };
 
+  // useEffect to get current location on mount
+//   useEffect(() => {
+//     handleGetLocation();
+//   }, []);
+
   // on map load
   const onMapLoad = (map: any) => {
-    const controlDiv = document.createElement("div");
-    const controlUI = document.createElement("div");
-    controlUI.innerHTML = "Get Location";
-    controlUI.style.backgroundColor = "white";
-    controlUI.style.color = "black";
-    controlUI.style.border = "2px solid #ccc";
-    controlUI.style.borderRadius = "3px";
-    controlUI.style.boxShadow = "0 2px 6px rgba(0,0,0,.3)";
-    controlUI.style.cursor = "pointer";
-    controlUI.style.marginBottom = "22px";
-    controlUI.style.textAlign = "center";
-    controlUI.style.width = "100%";
-    controlUI.style.padding = "8px 0";
-    controlUI.addEventListener("click", handleGetLocationClick);
-    controlDiv.appendChild(controlUI);
+    handleGetLocation();
+    // const controlDiv = document.createElement("div");
+    // const controlUI = document.createElement("div");
+    // // controlUI.innerHTML = "Get Location";
+    // controlUI.style.backgroundColor = "white";
+    // controlUI.style.color = "black";
+    // controlUI.style.border = "2px solid #ccc";
+    // controlUI.style.borderRadius = "3px";
+    // controlUI.style.boxShadow = "0 2px 6px rgba(0,0,0,.3)";
+    // controlUI.style.cursor = "pointer";
+    // controlUI.style.marginBottom = "22px";
+    // controlUI.style.textAlign = "center";
+    // controlUI.style.width = "100%";
+    // controlUI.style.padding = "8px 0";
+    // // controlUI.addEventListener("click", handleGetLocationClick);
+    // controlDiv.appendChild(controlUI);
 
-    // const centerControl = new window.google.maps.ControlPosition(
-    //   window.google.maps.ControlPosition.TOP_CENTER,
-    //   0,
-    //   10
-    // );
-
-    map.controls[window.google.maps.ControlPosition.TOP_CENTER].push(
-      controlDiv
-    );
+    // map.controls[window.google.maps.ControlPosition.TOP_CENTER].push(controlDiv);
   };
 
   return (
@@ -106,7 +115,25 @@ const MapComponent = () => {
       >
         {selectedPlace && <Marker position={searchLngLat} />}
         {currentLocation && <Marker position={currentLocation} />}
+        {searchLngLat && currentLocation && (
+          <DirectionsService
+            options={{
+              destination: searchLngLat,
+              origin: currentLocation,
+              travelMode: google.maps.TravelMode.DRIVING,
+            }}
+            callback={directionsCallback}
+          />
+        )}
+        {directions && (
+          <DirectionsRenderer
+            options={{
+              directions: directions,
+            }}
+          />
+        )}
       </GoogleMap>
+      {travelTime && <p>Estimated travel time: {travelTime}</p>}
     </div>
   );
 };
